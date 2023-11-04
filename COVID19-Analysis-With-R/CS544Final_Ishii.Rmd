@@ -1,0 +1,384 @@
+---
+title: "CS544Final_Ishii"
+output:
+  html_document:
+    fig_width: 12
+    code_folding: hide
+    highlight: tango
+    toc: true
+    toc_float:
+      collapsed: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width=12, fig.height=10,
+                      echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+###Project Overview
+This project aims to visualize the progress of vaccinations against notoriously prevailing COVID-19.
+
+Instead of showing just pure numbers of doses given to citizens in those countries, this analysis factors in their population, vaccination/combination types, geographical regions (Asia/America etc.), and income levels (High/middle etc.).
+
+To do so, I combined the following three different datasets/data-sources into a dataframe:
+
+  1) World Vaccination Progress (As of 19 Feb) from Kaggle
+  2) Population-by-Country from Datahub
+  3) Income Level from World Bank 
+
+In addition, we will see more statistical experiments on data in the dataset, as the report progress toward the end of the report.
+
+```{r cars}
+#Import relevant libraries
+library(scales)
+library(sampling)
+library(cluster)
+library(zoo)
+library(boot)
+library(plotly)
+set.seed(44)
+
+#Import Dataset of Covid-19 Vaccination Process 
+
+	df <- read.csv("F:\\Boston\\R\\FinalProject\\country_vaccinations.csv")
+	df_clean<-df 
+	df_clean[is.na(df)]<-0
+
+#		 Clean Data
+  	#Eliminate 0 data in Total columns
+		for(i in 2:length(df_clean[,1])){
+			if(df_clean$total_vaccinations[i]==0 && df_clean$country[i]==df_clean$country[i-1])   
+			  df_clean$total_vaccinations[i]<-df_clean$total_vaccinations[i-1]
+		}
+
+		df_clean$progress[1]<-0
+
+ 	 #Create a progress column in df
+		for(i in 2:length(df_clean[,1])){
+			if(df_clean$country[i]==df_clean$country[i-1]) df_clean$progress[i]<-df_clean$total_vaccinations[i]-df_clean$total_vaccinations[i-1]
+		}
+
+
+#		Create a new df 
+
+	#Country-wise chronological df(vaccination progress for all countries from date 2020-12-13)
+		df_countrywise<-data.frame(date=seq(as.Date(min(df$date)), as.Date(max(df$date)), by="day"))
+ 		con<-names(table(df_clean[,1]))
+		df_countrywise[con]<-0
+		rownames(df_countrywise)<-df_countrywise[,1]
+		df_countrywise<-df_countrywise[,-1]
+
+		#add data
+			for(i in 1:length(df_clean[,1])){
+				df_countrywise[df_clean[i,3],df_clean[i,1]]<-df_clean[i,4]
+			}
+
+		#If 0, replace with a previous value
+			df_countrywise[df_countrywise==0]<-NA
+			df_countrywise        <- na.locf(df_countrywise,na.rm=FALSE)
+			df_countrywise[is.na(df_countrywise)]<-0
+
+		#Total Vaccination/combined sum of all the countries
+			df_countrywise$TTL<-rowSums(df_countrywise)
+
+#	 Country-wise latest data frame(vaccination progress as of xx/xx)
+	
+		latest<-max(df$date)
+		df_latest<-df_countrywise[latest,]
+		df_latest<-data.frame(t(df_latest))
+		colnames(df_latest)<-"TTL_Vaccinated"
+
+		#Plug in Income Level indicator	
+			#https://datahelpdesk.worldbank.org/knowledgebase/articles/906519-world-bank-country-and-lending-groups
+			class <- read.csv("F:\\Boston\\R\\FinalProject\\country_classification.csv")
+			df_latest$class<-with(class, Income.group[match(rownames(df_latest), Economy)])
+			df_latest<-df_latest[!is.na(df_latest$class),]
+
+		#Plug in populations
+#			https://datahub.io/JohnSnowLabs/population-figures-by-country#data
+			population<-read.csv("F:\\Boston\\R\\FinalProject\\population.csv")
+			population<-population[,c(colnames(population)[1],"X2019")]
+			colnames(population)<-c("country","X2019")
+			df_latest$population<-with(population, X2019[match(rownames(df_latest), country)])
+
+		#Plug in vaccine types
+			df_latest$vaccine<-with(df, vaccines[match(rownames(df_latest), country)])
+	
+		#Vaccination Progress by Ratio against population
+			df_latest$progress<-round(df_latest$TTL_Vaccinated/df_latest$population,8)
+
+		#Plug in Region
+			df_latest$region<-with(class, Region[match(rownames(df_latest), Economy)])
+
+		#Check NA Values
+	#		df_latest[is.na(df_latest)]
+	
+```
+### Data Profile
+
+In this analysis, we will look into vaccination progress of 86 countries of countries from 7 regions
+
+```{r table1, echo=TRUE}
+table(df_latest$region)
+```
+
+Amongst those who started vaccinating, there are three groups of income level;  High income, Upper middle income, and Lower middle income. 
+This also shows  that countries of low income profile have not been able to start vaccinating yet.
+
+```{r table2, echo=TRUE}
+		table(df_latest$class)
+```
+
+Following table demonstrates the number of countries that adopted each vaccine combination.
+Each country chose their own combination of vacine types - Some chose just one type; others chose even 5 different types.
+The most popular combination is Pfizer/BioNTech, followed by the combination of Moderna, Oxford/AstraZeneca, Pfizer/BioNTech just by 1 country.
+
+```{r table3, echo=TRUE}
+
+		table(df_latest$vaccine)
+```
+
+### Data Visualisation
+
+Using the above mentioned datasets, this section will visualize vaccination progresses from several angles to find out more relevant facts.
+
+
+The following histogram and  pie chart are to show the numbers/% of countries using each of those vaccine combinations - same as the last table.
+It visually shows that Pfizer/BioNTech and Moderna/AstraZeneca/Pfizer/BioNTech are neck-to-neck and Oxfort/Astra Zeneca vaccine is used in many countries, as of 19 Feb.
+
+```{r vaccine adoption, echo=TRUE}	
+   	# Histogram - How many countries use which vaccines/combination
+		par(mar=c(5,22,3,3))
+		x<-table(df_latest$vaccine)
+		x<-x[order(x,decreasing=TRUE)]
+		k<-data.frame(x)
+		colnames(k)<-c('Vaccine', 'Freq')
+ 		plot_ly(k, x=~Vaccine, y=~Freq, name= ~Vaccine, type="bar") %>% layout(showlegend = FALSE)
+
+		
+	#Pie chart with labels
+		par(mar=c(5,22,5,3))
+		plot_ly(k, labels=~Vaccine, values=~Freq, type="pie")%>%layout(showlegend = FALSE)
+	
+```
+
+In terms of the doses provided to people, on the other hand, the data shows a different landscape.
+In this bar chart, you can see that Moderna + Pfizer vaccines are given to people most, and Sinopharm + Sinovac vaccines came in the second place.
+The latter combination must surprise you because this combination is adopted only by 1 country in the world, China, and it, standalone is beating the rest of the combinations in the numbers of doses given. This appears to me how fast China's action toward vaccinations has been so far.
+
+
+```{r Vaccination progress by vaccine types, echo=TRUE}
+	# Vaccination progress by vaccine types
+		y<-xtabs(TTL_Vaccinated~vaccine, df_latest)
+    y<-y[order(y,decreasing=TRUE)]
+		j<-data.frame(y)
+		colnames(j)<-c("Vaccine", "doses")
+		plot_ly(j, x=~Vaccine, y=~doses, name= ~Vaccine, type="bar")  %>% layout(showlegend = FALSE)
+
+```
+
+The following chronological bar graph shows the global vaccination progress so far.
+
+```{r Vaccination progress by date, echo=TRUE}
+	# Vaccination progress by date
+
+  	plot_ly(x=rownames(df_countrywise), y=df_countrywise$TTL/1000, type="bar")
+
+
+```
+
+The above-mentioned progress has been driven largely by USA, China, UK, India, and Israel, as the data shows.
+
+```{r Vaccination progress by country, echo=TRUE}
+	# Vaccination progress by country
+			z<-df_latest
+			z<-z[order(z$TTL_Vaccinated,decreasing=TRUE),]
+			plot_ly(z, x=reorder(rownames(z),z$TTL_Vaccinated), y=~TTL_Vaccinated/1000, type="bar") %>% layout(font=list(size=10))
+
+```
+
+It is also crucial to be mindful of vaccination progress in a ratio to population size, because obtainment of social immunity is one of major reasons of this human effort to vaccinate their citizens. The more people get immunity against the virus in a society, the less would the virus spread be, broadly speaking.
+
+In this context, those small countries like Gibraltar, Israel, Seychelles, and UAE, are prominent and outstanding.
+
+I hypothesized that this contrast rooted in the shortage of vaccine productions/availabilities. The bigger the population is, the more difficult presumably would the security of vaccines for their entire population.
+
+```{r Vaccination progress as ratio to its population by country, echo=TRUE}
+	# Vaccination progress as ratio to its population by country		
+			x<-df_latest[order(df_latest$progress,decreasing=TRUE),]
+			plot_ly(x, x=reorder(rownames(x),x$progress), y=~progress, type="bar") %>% layout(font=list(size=10))
+
+```
+
+```{r boxplot - Vaccination progress as ratio to its population by country, echo=FALSE}
+	# boxplot - Vaccination progress as ratio to its population by country
+			par(mfrow=c(1,1))
+			boxplot(df_latest$progress, col=hcl(0), main="Vaccination Progress against Population", horizontal=TRUE)
+			text(df_latest$progress[df_latest$progress>fivenum(df_latest$progress)[4]], 
+				rep(1.2,5), srt=90, adj=0, 
+				labels=rownames(df_latest[df_latest$progress>fivenum(df_latest$progress)[4],]), cex=0.9)
+```
+
+```{r Population vs progress, echo=TRUE}
+	# Population vs progress
+
+		plot(df_latest$population/10000, df_latest$progress, xlim=c(1, max(df_latest$population)*1.1/10000),
+			main="Plot of population vs Vaccination Progress", xlab="population in 10 thousands", ylab="Progress (vaccination/Capita)")	
+		text(df_latest$population/10000+15000, df_latest$progress, labels=rownames(df_latest), cex=0.75, font=1)
+
+```
+
+
+###Random Sampling & Central Limit Theorem 
+
+The following histograms are to demonstrate the Central Limit Theorem, using three datasets; Total Vaccination, Vaccination Progress, and Population of each countries.
+
+It visually proves that the more samples are taken, the narrower would the standard deviations be, whilst mean value stay the same.
+
+ 
+ 
+#### Random Sampling on Total Vaccination
+```{r TTL Vaccination, echo=TRUE}
+	
+samples<-10000
+		x<-df_latest$TTL_Vaccinated/1000; mu<-mean(df_latest$TTL_Vaccinated/1000); std<-sd(df_latest$TTL_Vaccinated/1000)
+		sample.size<-c(5,25,125,625)
+		h<-numeric()
+		for(i in 1:length(sample.size)){
+			par(mar=c(2,2,2,2))
+			xbar<-numeric(samples)
+			xsd<-numeric(samples)
+			for(k in 1:samples){
+				xbar[k]<-mean(sample(x, size=sample.size[i], replace=TRUE))
+			}
+			h[i]<-plot_ly(x=xbar, type="histogram", name=paste("sample size=", sample.size[i]))
+		}
+		subplot(h, nrows=2)
+
+```
+
+
+#### Random Sampling on Vaccination Progress
+```{r Vaccination Progress, echo=TRUE}
+		samples<-10000
+		x<-df_latest$progress; mu<-mean(df_latest$progress); std<-sd(df_latest$progress)
+		sample.size<-c(5,25,125,625)
+		h<-numeric()
+		for(i in 1:length(sample.size)){
+			par(mar=c(2,2,2,2))
+			xbar<-numeric(samples)
+			xsd<-numeric(samples)
+			for(k in 1:samples){
+				xbar[k]<-mean(sample(x, size=sample.size[i], replace=TRUE))
+			}
+			h[i]<-plot_ly(x=xbar, type="histogram", name=paste("sample size=", sample.size[i]))
+		}
+		subplot(h, nrows=2)
+
+
+```
+
+
+#### Random Sampling on Population(in 10ks)
+```{r Population, echo=TRUE}
+		samples<-10000
+		x<-df_latest$population/10000; mu<-mean(df_latest$population/10000); std<-sd(df_latest$population/10000); xl<-max(x)
+		sample.size<-c(5,25,125,625)
+		h<-numeric()
+		for(i in 1:length(sample.size)){
+			par(mar=c(2,2,2,2))
+			xbar<-numeric(samples)
+			xsd<-numeric(samples)
+			for(k in 1:samples){
+				xbar[k]<-mean(sample(x, size=sample.size[i], replace=TRUE))
+			}
+			h[i]<-plot_ly(x=xbar, type="histogram", name=paste("sample size=", sample.size[i]))
+		}
+		subplot(h, nrows=2)
+
+```
+
+
+###Sampling methods
+
+In this section, we will run four sampling methods, Simple Random Sampling WITH replacement, Systematic Sampling, Stratified Sampling WITH replacement, and Cluster Sampling, and compare the distributions with original histogram.
+
+We can infer from this analysis that, even if these samples were used, instead of the whole dataset, the average of samples would have stayed the same, whereas the standard deviation would have been narrower than the whole original dataset.
+
+```{r Sampling , echo=TRUE}
+
+		par(mfrow=c(2,3))
+		br<-seq(0,1,0.2)
+		h<-""
+		h[1]<-plot_ly(x=df_latest$progress, type="histogram", name="Original")
+
+## 		Simple Random Sampling WITH replacement
+		s<-srswr(50, nrow(df_latest))
+	      rows<-(1:nrow(df_latest))[s!=0]
+	      rows<-rep(rows, s[s!=0])
+    		# The data of selected samples and frequencies
+		h[2]<-plot_ly(x=df_latest[rows, ]$progress, type="histogram", name="Simple Random Sampling")
+
+
+##		Systematic Sampling
+	   pik<-inclusionprobabilities(df_latest$progress, 70)
+
+	  #"UPsystematic" uses systematic method with unequal probabilities
+ 	    s<-UPsystematic(pik)
+	    obj.2<-df_latest[s!=0,]
+	    h[3]<-plot_ly(x=obj.2$progress, type="histogram", name="Systematic Sampling")
+
+
+
+##		Stratified Sampling WITH replacement
+	    #sample size of 3 from each section is sampled without replacement with "strata" function:
+
+		order.index<-order(df_latest$class)
+		data<-df_latest[order.index,]
+
+	 	freq<-table(data$class)
+		st.sizes<-20*freq/sum(freq)
+ 	      st1<-strata(data, stratanames="class", size=st.sizes, method="srswor", description=FALSE)
+		st.sample1<-getdata(data, st1)
+    h[4]<-plot_ly(x=st.sample1$progress, type="histogram", name="Stratified Sampling")
+
+
+##		Cluster Sampling
+		order.index<-order(df_latest$class)
+		data<-df_latest[order.index,]
+		cl<-cluster(data, c("class"), size=2, method="srswor")
+		cl.sample1<-getdata(df_latest, cl)
+	  h[5]<-plot_ly(x=cl.sample1$progress, type="histogram", name="Clustered Sampling")
+
+		subplot(h, nrows=2)
+
+```
+
+
+###Bootstrap estimate of the bias
+
+Lastly, I ran analysis of Bootstrap estimate of the bias.
+  
+As the sample size grew, bias decreased, whereas standard deviation stayed in a relatively same range.
+```{r bootstrap , echo=TRUE}
+	samplemedian<-function(x, indices){
+			return (median(x[indices]))
+			}
+
+	boot_model<-function(data, R){
+			b<-boot(data=data, statistic=samplemedian, R=R)
+			resample.A<-replicate(R, sample(data, replace=TRUE), simplify=FALSE)
+			medians.star<-sapply(resample.A, median, simplify=TRUE)
+			h<-hist(medians.star, col="cyan", prob=FALSE, main=paste("Histogram of Sample size ",R), xlab="sample median")
+			h
+			text(median(df_latest$progress)*1.1,max(h$counts)*1.01,col="red","Original Median", lwd=3, lty=2)
+			abline(v=median(df_latest$progress), col="red", lwd=3, lty=2)
+			text(median(df_latest$progress)*0.80,max(h$counts),col="black",
+				paste("bias: ",round(mean(b$t)-b$t0, digits=5),"std: ", round(sd(medians.star),digits=5)), lwd=3, lty=2)
+	}
+	par(mfrow=c(1,3))
+	boot_model(df_latest$progress, 10)
+	boot_model(df_latest$progress, 100)
+	boot_model(df_latest$progress, 1000)
+
+```
