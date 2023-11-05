@@ -17,6 +17,8 @@ For a comprehensive understanding of the model’s design, effectiveness, and ap
 
 ### ExplainableAI
 
+This project focuses on the development of an advanced machine-learning model. It leverages the principles of natural selection to optimize rule bundles for the classification of data—in this case, the Iris dataset. 
+The algorithm iterates through generations of rule bundles, employing mechanisms such as crossover and mutation to evolve increasingly accurate predictions. Each rule bundle comprises a set of rules that assign weights to class attributes, allowing for a two-tiered prediction process at both the rule and bundle levels. Performance is meticulously evaluated based on accuracy, with the best-performing bundles carried forward to subsequent generations. This methodical approach aims to refine the predictive capabilities of the model, contributing to the overarching goals of the parent repository.
 
 ### HazardousAsteroid_Detection
 
