@@ -37,24 +37,24 @@ I hypothesize that this contrast is rooted in the availability of vaccine produc
 
  <tr>
     <td align = "center" width="(100/x)%">
-      <img height="200" align="center" alt="image" src="https://user-images.githubusercontent.com/62607343/130643540-059551ac-4e34-4f4b-b2d3-81c96df30766.png">  
+      <img align="center" width="300" alt="image" src="https://user-images.githubusercontent.com/62607343/130643540-059551ac-4e34-4f4b-b2d3-81c96df30766.png">  
     </td>
     <td align = "center" width="(100/x)%">
-      <img height="200" align="center" alt="image" src="https://user-images.githubusercontent.com/62607343/130643658-f6380d88-c0c7-4f6a-a835-12c355122174.png">  
+      <img  align="center" width="300" alt="image" src="https://user-images.githubusercontent.com/62607343/130643658-f6380d88-c0c7-4f6a-a835-12c355122174.png">  
     </td>
     <td align = "center" width="(100/x)%">
-      <img height="200" align="center" alt="image" src="https://user-images.githubusercontent.com/62607343/130643658-f6380d88-c0c7-4f6a-a835-12c355122174.png">
+      <img align="center" width="300" alt="image" src="https://user-images.githubusercontent.com/62607343/130643992-f5b860ed-5fac-4dae-90cc-c9ee9e196c1b.png">        
     </td>
  </tr>
  <tr>
     <td align = "center" width="(100/x)%">
-      <img height="200" align="center" alt="image" src="https://user-images.githubusercontent.com/62607343/130643780-f0fdb967-f97b-4c46-84f4-27d322f1fcd2.png">  
+      <img align="center" width="300" alt="image" src="https://user-images.githubusercontent.com/62607343/130643780-f0fdb967-f97b-4c46-84f4-27d322f1fcd2.png">  
     </td>
     <td align = "center" width="(100/x)%">
-      <img height="200" align="center" alt="image" src="https://user-images.githubusercontent.com/62607343/130643992-f5b860ed-5fac-4dae-90cc-c9ee9e196c1b.png">  
+     <img  align="center" width="300" alt="image" src="https://user-images.githubusercontent.com/62607343/130643658-f6380d88-c0c7-4f6a-a835-12c355122174.png"> 
     </td>
     <td align = "center" width="(100/x)%">
-      <img height="200" align="center" alt="image" src="https://user-images.githubusercontent.com/62607343/130644081-cd6b9aaa-3830-496d-82ad-e4d1ceed28e5.png">
+      <img align="center" width="300" alt="image" src="https://user-images.githubusercontent.com/62607343/130644081-cd6b9aaa-3830-496d-82ad-e4d1ceed28e5.png">
     </td>
  </tr>
  
