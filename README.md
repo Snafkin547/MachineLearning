@@ -22,6 +22,8 @@ The algorithm iterates through generations of rule bundles, employing mechanisms
 
 ### HazardousAsteroid_Detection
 
+The HazardousAsteroid_Detection project utilizes machine learning to predict potentially dangerous asteroids with a Random Forest classifier achieving a notable 99% accuracy. 
+Feature selection was also conducted using the Random Forest algorithm, highlighting its versatility within the project.
 
 ### IBM ML
 
