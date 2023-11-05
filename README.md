@@ -26,7 +26,8 @@ The HazardousAsteroid_Detection project utilizes machine learning to predict pot
 Feature selection was also conducted using the Random Forest algorithm, highlighting its versatility within the project.
 
 ### IBM ML
-
+The project contains code that was implemented to successfully complete the IBM AI Engineer professional certificate on Coursera. 
+It reflects a comprehensive educational journey through various aspects of AI and Machine Learning.
 
 ### text_preprocessing
 
